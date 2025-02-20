@@ -10,17 +10,23 @@
 </head>
 <body>
 <div id="app">
-    <div class="column" :class="{ blocked: isColumnBlocked(1) }">
+    <div class="column" :class="{ blocked: isColumnBlocked(1) }"> <!-- класс "blocked", если столбец заблокирован -->
         <h2>Первый столбец</h2>
+        <!--Перебирает массив columns[0].cards (карточки первого столбца)
+         создает экземпляр компонента <card>.
+         уникальный key для каждой карточки (card.id).
+         передает данные от родительского компонента к дочернему через пропс card.
+         обрабатывает событие update, вызывая метод updateCard при необходимости.-->
         <card v-for="card in columns[0].cards" :key="card.id" :card="card" @update="updateCard"></card>
         <button @click="openForm(1)" :disabled="columns[0].cards.length >= 3">Добавить карточку</button>
-        <form v-if="formColumnId === 1" @submit.prevent="submitForm">
+        <form v-if="formColumnId === 1" @submit.prevent="submitForm"> <!-- Prevent предотвращает отправку формы по умолчанию -->
             <h3>Создать карточку</h3>
             <input type="text" v-model="newCardTitle" placeholder="Заголовок карточки" />
             <div v-for="(item, index) in newCardItems" :key="index" class="form-item">
                 <input type="text" v-model="newCardItems[index]" placeholder="Пункт списка" />
                 <button @click="removeItem(index)" v-if="newCardItems.length > 3">-</button>
             </div>
+            <!-- Кнопка добавления нового пункта, доступна только если пунктов меньше 5 -->
             <button @click="addItem" v-if="newCardItems.length < 5">+</button>
             <div class="form-buttons">
                 <button @click="submitForm">Сохранить</button>
