@@ -38,3 +38,15 @@ button:hover {
 button:disabled {
     background-color: #d1c4e9;
 }
+.timestamp-item {
+    display: block;
+    font-size: 0.8em;
+    color: #666;
+    margin-top: 4px;
+}
+
+.timestamp-card {
+    font-size: 0.9em;
+    color: #007bff; /* Выделяем цветом */
+    margin-top: 10px;
+}

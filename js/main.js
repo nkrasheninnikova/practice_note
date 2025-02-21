@@ -10,24 +10,33 @@ Vue.component('card', {
             type="checkbox" 
             :checked="item.completed" 
             @change="handleCheckboxChange(item)" 
-            :disabled="item.completed" 
           >
           <span :class="{ completed: item.completed }">{{ item.text }}</span>
+          <small v-if="item.completedAt" class="timestamp-item">Завершено: {{ item.completedAt }}</small>
         </li>
       </ul>
-      <p v-if="card.completedAt">Завершено: {{ card.completedAt }}</p>
+      <p v-if="card.completedAt" class="timestamp-card"><strong>Карточка завершена:</strong> {{ card.completedAt }}</p>
     </div>
   `,
     methods: {
         handleCheckboxChange(item) {
-            if (!item.completed) {
-                this.$set(item, 'completed', true); // Устанавливаем только в true
-                this.$emit('update'); // Оповещаем родительский компонент о изменениях
+            const now = new Date().toLocaleString(); // Генерируем текущий таймстамп
+
+            // Обновляем состояние элемента в зависимости от текущего состояния чекбокса
+            if (item.completed) {
+                // Если элемент был выполнен и пользователь снимает галочку
+                this.$set(item, 'completed', false);
+                this.$set(item, 'completedAt', null); // Сбрасываем таймстамп
+            } else {
+                // Если элемент был не выполнен и пользователь ставит галочку
+                this.$set(item, 'completed', true);
+                this.$set(item, 'completedAt', now); // Устанавливаем новый таймстамп
             }
+
+            this.$emit('update'); // Оповещаем родительский компонент о изменениях
         }
     }
 });
-// Экземпляр Vue
 new Vue({
     el: '#app',
     data: {
@@ -44,76 +53,81 @@ new Vue({
         // При создании приложения загружаем сохраненные данные из localStorage
         const savedData = localStorage.getItem('noteAppData');
         if (savedData) {
-            this.columns = JSON.parse(savedData);// Восстанавливаем данные
+            this.columns = JSON.parse(savedData); // Восстанавливаем данные
         }
     },
     methods: {
-        openForm(columnId) {// Метод для открытия формы создания карточки
+        openForm(columnId) {
             this.formColumnId = columnId;
             this.newCardTitle = '';
             this.newCardItems = ['', '', ''];
         },
-        closeForm() {// Метод для закрытия формы
+        closeForm() {
             this.formColumnId = null;
         },
-        addItem() {// Метод для добавления нового пункта в форму
+        addItem() {
             this.newCardItems.push('');
         },
-        removeItem(index) {// Метод для удаления пункта из формы
+        removeItem(index) {
             this.newCardItems.splice(index, 1);
         },
-        submitForm() {// Метод для сохранения новой карточки
+        submitForm() {
             const column = this.columns.find(col => col.id === this.formColumnId);
-            if (this.newCardTitle && this.newCardItems.every(item => item.trim())) {// Проверяем, что все поля заполнены
+            if (this.newCardTitle && this.newCardItems.every(item => item.trim())) {
                 column.cards.push({
                     id: Date.now(),
                     title: this.newCardTitle,
-                    items: this.newCardItems.map(text => ({ text, completed: false })),
-                    completedAt: null// Дата завершения
+                    items: this.newCardItems.map(text => ({ text, completed: false, completedAt: null })),
+                    completedAt: null // Дата завершения карточки
                 });
-                this.saveData();// Сохраняем данные в localStorage
+                this.saveData();
                 this.closeForm();
             } else {
                 alert('Заполните все поля!');
             }
         },
-        updateCard() {// Метод для обновления состояния карточек
-            this.columns.forEach(column => {// Перебираем все столбцы
-                column.cards.forEach(card => {// Перебираем все карточки в столбце
-                    const completedCount = card.items.filter(item => item.completed).length;// Кол-во выполненных пунктов
-                    const totalItems = card.items.length;// Общее кол-во пунктов
-                    const completionPercentage = (completedCount / totalItems) * 100;// Процент выполнения
-                    if (completionPercentage > 50 && column.id === 1) {// Если выполнено более 50% и карточка в первом столбце
-                        this.moveCard(card, 1, 2); // Перемещаем карточку во второй столбец
+        updateCard() {
+            this.columns.forEach(column => {
+                column.cards.forEach(card => {
+                    const completedCount = card.items.filter(item => item.completed).length;
+                    const totalItems = card.items.length;
+                    const completionPercentage = (completedCount / totalItems) * 100;
+
+                    // Перемещаем карточку во второй столбец, если выполнено более 50%
+                    if (completionPercentage > 50 && column.id === 1) {
+                        this.moveCard(card, 1, 2);
                     }
-                    if (completionPercentage === 100) {// Если выполнено 100%
-                        card.completedAt = new Date().toLocaleString();// Устанавливаем дату завершения
-                        this.moveCard(card, column.id, 3);// Перемещаем карточку в третий столбец
+
+                    // Завершаем карточку, если выполнено 100%
+                    if (completionPercentage === 100) {
+                        card.completedAt = new Date().toLocaleString(); // Устанавливаем дату завершения карточки
+                        this.moveCard(card, column.id, 3);
                     }
                 });
             });
             this.saveData();
         },
-        moveCard(card, fromColumnId, toColumnId) {// Метод для перемещения карточки между столбцами
-            const fromColumn = this.columns.find(col => col.id === fromColumnId);// Находим исходный столбец
-            const toColumn = this.columns.find(col => col.id === toColumnId);// Находим нужный столбец
-            const cardIndex = fromColumn.cards.indexOf(card);// Получаем индекс карточки в исходном столбце
-            if (toColumn.cards.length < (toColumnId === 2 ? 5 : Infinity)) {// Проверяем ограничения на количество карточек
-                toColumn.cards.push(card);// Добавляем карточку в нужный столбец
-                fromColumn.cards.splice(cardIndex, 1);// Удаляем карточку из исходного столбца
+        moveCard(card, fromColumnId, toColumnId) {
+            const fromColumn = this.columns.find(col => col.id === fromColumnId);
+            const toColumn = this.columns.find(col => col.id === toColumnId);
+            const cardIndex = fromColumn.cards.indexOf(card);
+
+            if (toColumn.cards.length < (toColumnId === 2 ? 5 : Infinity)) {
+                toColumn.cards.push(card);
+                fromColumn.cards.splice(cardIndex, 1);
             }
         },
-        saveData() {// Метод для сохранения данных в localStorage
+        saveData() {
             localStorage.setItem('noteAppData', JSON.stringify(this.columns));
         },
-        isColumnBlocked(columnId) {// Метод для проверки блокировки первого столбца
+        isColumnBlocked(columnId) {
             if (columnId === 1) {
                 const secondColumnFull = this.columns[1].cards.length >= 5;
                 const firstColumnOver50 = this.columns[0].cards.some(card => {
                     const completedCount = card.items.filter(item => item.completed).length;
                     return (completedCount / card.items.length) * 100 > 50;
                 });
-                return secondColumnFull && firstColumnOver50;// Блокируем, если оба условия выполняются
+                return secondColumnFull && firstColumnOver50;
             }
             return false;
         }
