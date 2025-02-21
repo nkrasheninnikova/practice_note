@@ -1,17 +1,31 @@
-Vue.component('card', { // Создаем компонент "card" для отображения карточек
-    props: ['card'],//принимаем данные от родительского компонента к дочернему через пропс
+Vue.component('card', {
+    props: ['card'],
     template: `
     <div class="card">
       <h3>{{ card.title }}</h3>
       <ul>
         <li v-for="(item, index) in card.items" :key="index">
-          <input type="checkbox" v-model="item.completed" @change="$emit('update')">
+          <!-- Добавляем условие для установки значения только в true -->
+          <input 
+            type="checkbox" 
+            :checked="item.completed" 
+            @change="handleCheckboxChange(item)" 
+            :disabled="item.completed" 
+          >
           <span :class="{ completed: item.completed }">{{ item.text }}</span>
         </li>
       </ul>
-      <p v-if="card.completedAt">Завершено: {{ card.completedAt }}</p> <!-- Отображаем дату завершения, если она есть -->
+      <p v-if="card.completedAt">Завершено: {{ card.completedAt }}</p>
     </div>
-  `
+  `,
+    methods: {
+        handleCheckboxChange(item) {
+            if (!item.completed) {
+                this.$set(item, 'completed', true); // Устанавливаем только в true
+                this.$emit('update'); // Оповещаем родительский компонент о изменениях
+            }
+        }
+    }
 });
 // Экземпляр Vue
 new Vue({
